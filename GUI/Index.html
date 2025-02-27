@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welding Robot GUI with 3D Model</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Link to the external CSS file -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r136/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.136.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Link to the external JavaScript file -->
+    <script src="scripts.js" defer></script>
+</head>
+<body>
+    <!-- Video Section (Full-screen Webcam) -->
+    <div class="video-container">
+        <video id="webcam" autoplay playsinline></video>
+    </div>
+
+    <!-- Sidebar (right side, showing Voltage and Position) -->
+    <div class="overlay sidebar">
+        <h2>Welder Voltage</h2>
+        <p id="voltage">24V</p>
+        <h2>Robotic Arm Position</h2>
+        <p id="position">X: 0, Y: 0, Z: 0</p>
+    </div>
+
+    <!-- Controls Section (Buttons below the webcam) -->
+    <div class="controls">
+        <button class="btn-weld" onclick="handleAction('Weld')">Weld</button>
+        <button class="btn-scan" onclick="handleAction('Scan')">Scan</button>
+        <button class="btn-stop" onclick="handleAction('STOP')">STOP</button>
+    </div>
+
+    <!-- 3D Model Section -->
+    <div class="model-container" id="model-container"></div>
+
+    <!-- Forward & Backward buttons -->
+    <div class="forward-backward">
+        <button onclick="handleControl('Forward')">Forward</button>
+        <button onclick="handleControl('Backward')">Backward</button>
+    </div>
+
+    <!-- D-Pad controls (for up, down, left, right) -->
+    <div class="dpad">
+        <button class="up" onclick="handleControl('Up')">&#9650;</button>
+        <button class="left" onclick="handleControl('Left')">&#9668;</button>
+        <button class="right" onclick="handleControl('Right')">&#9658;</button>
+        <button class="down" onclick="handleControl('Down')">&#9660;</button>
+    </div>
+</body>
+</html>
