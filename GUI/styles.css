@@ -7,8 +7,10 @@ body {
 
 /* Video Section (Full-screen Webcam) */
 .video-container {
-    width: 100%;
-    height: 400px;
+    margin: auto;
+    margin-top: 5%;
+    width: 1200px;
+    height: 600px;
     background: #000;
 }
 
