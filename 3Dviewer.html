@@ -1,104 +1,163 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>3D Model Viewer</title>
-  <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-    }
-  </style>
+    <title>3D Model with Points</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { width: 100%; height: 100%; display: block; }
+        #selectButton { position: absolute; top: 10px; left: 10px; padding: 8px 16px; }
+        #controls { position: absolute; top: 10px; right: 10px; background: rgba(255, 255, 255, 0.8); padding: 10px; }
+        #saveButton { position: absolute; top: 50px; left: 10px; padding: 8px 16px; }
+    </style>
 </head>
 <body>
-  <canvas id="modelCanvas"></canvas>
+    <button id="selectButton">Select Points</button>
+    <button id="saveButton">Save Points</button>
+    <div id="controls">
+        <label for="pointSize">Point Size:</label>
+        <input type="range" id="pointSize" min="0.50" max="1.50" step="0.01" value="0.15"><br>
+        <label for="pointColor">Point Color:</label>
+        <input type="color" id="pointColor" value="#ff0000"><br>
+        <label for="lineColor">Line Color:</label>
+        <input type="color" id="lineColor" value="#0000ff">
+    </div>
+    <canvas id="modelCanvas"></canvas>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
-  <script>
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('modelCanvas') });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('modelCanvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.position.z = 5;
+        const ambientLight = new THREE.AmbientLight(0x404040);
+        scene.add(ambientLight);
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        directionalLight.position.set(1, 1, 1);
+        scene.add(directionalLight);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        let model;
+        const points = [];
+        const pointMaterial = new THREE.PointsMaterial({ color: 0xff0000, size: 0.15 });
+        const pointGeometry = new THREE.BufferGeometry();
+        const pointsObject = new THREE.Points(pointGeometry, pointMaterial);
+        scene.add(pointsObject);
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff, size: 10 });
+        let line;
+        let isSelecting = false;
 
-    camera.position.z = 5;
+        const loader = new THREE.OBJLoader();
+        loader.load('3Dtest.obj', function (object) {
+            model = object;
+            scene.add(model);
+            const boundingBox = new THREE.Box3().setFromObject(model);
+            const center = boundingBox.getCenter(new THREE.Vector3());
+            model.position.sub(center);
+        });
 
-    const ambientLight = new THREE.AmbientLight(0x404040);
-    scene.add(ambientLight);
+        const selectButton = document.getElementById('selectButton');
+        selectButton.addEventListener('click', () => {
+            isSelecting = !isSelecting;
+            selectButton.textContent = isSelecting ? 'Stop Selecting' : 'Select Points';
+        });
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    directionalLight.position.set(1, 1, 1);
-    scene.add(directionalLight);
+        renderer.domElement.addEventListener('click', (event) => {
+            if (!model || !isSelecting) return;
+            const rect = renderer.domElement.getBoundingClientRect();
+            const mouse = new THREE.Vector2(
+                ((event.clientX - rect.left) / rect.width) * 2 - 1,
+                -((event.clientY - rect.top) / rect.height) * 2 + 1
+            );
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(model, true);
+            if (intersects.length > 0) {
+                const point = intersects[0].point;
+                points.push(point);
+                updatePoints();
+                updateLines();
+            }
+        });
 
-    const controls = new THREE.OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+        function updatePoints() {
+            const positions = new Float32Array(points.length * 3);
+            for (let i = 0; i < points.length; i++) {
+                positions[i * 3] = points[i].x;
+                positions[i * 3 + 1] = points[i].y;
+                positions[i * 3 + 2] = points[i].z;
+            }
+            pointGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        }
 
-    let model; // Store the loaded model
+        function updateLines() {
+            if (line) {
+                scene.remove(line);
+            }
+            if (points.length < 2) return;
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            line = new THREE.Line(lineGeometry, lineMaterial);
+            scene.add(line);
+        }
 
-    const loader = new THREE.OBJLoader();
-    loader.load(
-      'model.obj',
-      function (object) {
-        model = object; // Store the loaded object
-        scene.add(model);
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
 
-        const boundingBox = new THREE.Box3().setFromObject(model);
-        const center = boundingBox.getCenter(new THREE.Vector3());
-        model.position.sub(center);
-      },
-      function (xhr) {
-        console.log((xhr.loaded / xhr.total * 100) + '% loaded');
-      },
-      function (error) {
-        console.log('An error happened');
-        console.error(error);
-      }
-    );
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        window.addEventListener('resize', onWindowResize, false);
 
-    function animate() {
-      requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
+        document.getElementById('pointSize').addEventListener('input', (event) => {
+            pointMaterial.size = parseFloat(event.target.value);
+        });
+
+        document.getElementById('pointColor').addEventListener('input', (event) => {
+            pointMaterial.color.set(event.target.value);
+        });
+
+        document.getElementById('lineColor').addEventListener('input', (event) => {
+            lineMaterial.color.set(event.target.value);
+        });
+
+        document.getElementById('saveButton').addEventListener('click', () => {
+    const pointData = points.map(point => `${point.x},${point.y},${point.z}`).join('\n');
+
+    // Attempt to save directly to a file (browser limitations)
+    try {
+        const blob = new Blob([pointData], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'savedpts.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Direct file saving is not supported in this browser environment. Download will be used.", error);
+        // Fallback to download (same as before)
+        const blob = new Blob([pointData], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'savedpts.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
-
-    animate();
-
-    function onWindowResize() {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
-    }
-
-    window.addEventListener('resize', onWindowResize, false);
-
-    // Modify OrbitControls target to allow zoom to cursor
-    renderer.domElement.addEventListener('wheel', (event) => {
-      if (!model) return; // Exit if the model hasn't loaded yet
-
-      const rect = renderer.domElement.getBoundingClientRect();
-      const mouse = new THREE.Vector2(
-        ((event.clientX - rect.left) / rect.width) * 2 - 1,
-        -((event.clientY - rect.top) / rect.height) * 2 + 1
-      );
-
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(mouse, camera);
-
-      const intersects = raycaster.intersectObject(model, true); // Check for intersections with the model
-
-      if (intersects.length > 0) {
-        controls.target.copy(intersects[0].point); // Update the target to the intersection point
-        controls.update(); // Update controls immediately
-      }
-    });
-
-  </script>
+});
+    </script>
 </body>
 </html>
