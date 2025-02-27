@@ -131,32 +131,20 @@
         });
 
         document.getElementById('saveButton').addEventListener('click', () => {
-    const pointData = points.map(point => `${point.x},${point.y},${point.z}`).join('\n');
-
-    // Attempt to save directly to a file (browser limitations)
-    try {
-        const blob = new Blob([pointData], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'savedpts.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch (error) {
-        console.error("Direct file saving is not supported in this browser environment. Download will be used.", error);
-        // Fallback to download (same as before)
-        const blob = new Blob([pointData], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'savedpts.txt';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
+            const pointData = points.map(point => `${point.x},${point.y},${point.z}`).join('\n');
+            points.forEach(point => {
+                        fetch('/save', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ x: point.x, y: point.y, z: point.z }) //include z coordinate
+                        })
+                        .then(response => response.text())
+                        .then(data => console.log(data))
+                        .catch(error => console.error('Error:', error));
+                });
+    
 });
     </script>
 </body>
