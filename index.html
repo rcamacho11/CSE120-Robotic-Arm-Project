@@ -130,20 +130,18 @@
             lineMaterial.color.set(event.target.value);
         });
 
+
         document.getElementById('saveButton').addEventListener('click', () => {
-            const pointData = points.map(point => `${point.x},${point.y},${point.z}`).join('\n');
-            points.forEach(point => {
-                        fetch('/save', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ x: point.x, y: point.y, z: point.z }) //include z coordinate
-                        })
-                        .then(response => response.text())
-                        .then(data => console.log(data))
-                        .catch(error => console.error('Error:', error));
-                });
+        fetch('/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(points) // Send the entire points array
+        })
+        .then(response => response.text())
+        .then(data => console.log(data))
+        .catch(error => console.error('Error:', error));
     
 });
     </script>
